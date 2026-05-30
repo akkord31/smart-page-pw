@@ -1,6 +1,7 @@
 import logging
 import time
-from ..core.protocols import HookContext
+
+from core.protocols import HookContext
 
 logger = logging.getLogger("smart_playwright.actions")
 
@@ -9,7 +10,7 @@ _SKIP_LOGGING = frozenset({"wait_for_timeout", "evaluate"})
 
 class ActionLoggerPlugin:
     name = "action_logger"
-    priority = 1 
+    priority = 1
 
     def on_before(self, ctx: HookContext) -> None:
         if ctx.method in _SKIP_LOGGING:

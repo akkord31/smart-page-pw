@@ -20,8 +20,6 @@ class SmartPage:
         object.__setattr__(self, "_pm", plugins or PluginManager())
         object.__setattr__(self, "_cache", {})
 
-    # --- Proxy core ---
-
     def __getattr__(self, name: str) -> Any:
         if name in _PASSTHROUGH:
             return getattr(self._page, name)
@@ -39,24 +37,25 @@ class SmartPage:
 
     def _make_wrapper(self, method_name: str, fn: Callable) -> Callable:
         pm = object.__getattribute__(self, "_pm")
+        page_ref = self  # захватываем SmartPage, не Page
 
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             ctx = HookContext(method=method_name, args=args, kwargs=kwargs)
+            ctx.meta["_original_fn"] = fn
+            ctx.meta["page"] = page_ref
 
             pm.dispatch_before(ctx)
-
             if ctx.cancelled:
-                return ctx.result  # плагин подменил результат полностью
+                return ctx.result
 
             try:
-                # Если плагин уже проставил result (mock/stub) — не вызываем реальный метод
                 if ctx.result is None:
                     ctx.result = fn(*ctx.args, **ctx.kwargs)
             except Exception as e:
                 ctx.exception = e
                 pm.dispatch_error(ctx)
                 if ctx.exception is not None:
-                    raise ctx.exception from None  # плагин мог подменить/подавить
+                    raise ctx.exception from None
             else:
                 pm.dispatch_after(ctx)
 
@@ -65,12 +64,8 @@ class SmartPage:
         wrapper.__name__ = method_name
         return wrapper
 
-    # --- Navigation shortcuts (typed, не через proxy) ---
-
     def goto(self, url: str, **kwargs: Any) -> Any:
         return self.__getattr__("goto")(url, **kwargs)
-
-    # --- Plugin management API ---
 
     def use(self, plugin: Any) -> "SmartPage":
         """Fluent plugin registration: page.use(Logger()).use(Screenshot())"""

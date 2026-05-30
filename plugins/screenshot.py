@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime
-from ..core.protocols import HookContext
+
+from core.protocols import HookContext
 
 
 class ScreenshotOnFailurePlugin:
